@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "dgSpecHash": "OCiVIp9wt+7wjsJQet7JeSBd4e4g9PrBSoA5/Uqf6GZZ5a33oyGpiM2qibmH1M3uyU5cwH1hpkQyXZR9BbNnkw==",
+  "success": true,
+  "projectFilePath": "C:\\Users\\vladi\\Desktop\\TelegramBots\\SteamBot\\SteamBot.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\vladi\\.nuget\\packages\\microsoft.netcore.platforms\\5.0.0\\microsoft.netcore.platforms.5.0.0.nupkg.sha512",
+    "C:\\Users\\vladi\\.nuget\\packages\\microsoft.win32.registry\\5.0.0\\microsoft.win32.registry.5.0.0.nupkg.sha512",
+    "C:\\Users\\vladi\\.nuget\\packages\\protobuf-net\\3.0.73\\protobuf-net.3.0.73.nupkg.sha512",
+    "C:\\Users\\vladi\\.nuget\\packages\\protobuf-net.core\\3.0.73\\protobuf-net.core.3.0.73.nupkg.sha512",
+    "C:\\Users\\vladi\\.nuget\\packages\\steamkit2\\2.4.0-alpha.2\\steamkit2.2.4.0-alpha.2.nupkg.sha512",
+    "C:\\Users\\vladi\\.nuget\\packages\\system.security.accesscontrol\\5.0.0\\system.security.accesscontrol.5.0.0.nupkg.sha512",
+    "C:\\Users\\vladi\\.nuget\\packages\\system.security.principal.windows\\5.0.0\\system.security.principal.windows.5.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}

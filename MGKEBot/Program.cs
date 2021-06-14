@@ -26,7 +26,7 @@ namespace MGKEBot
             public List<Subject> Subjects;
         }
 
-        private const string TOKEN = "1622981140:AAFSwQR_LmwtklAVcu03DqFBxmLHfQQXEu0";
+        private const string TOKEN = "";//todo
 
         private const string ONE_EMOJI = "1\ufe0f\u20e3";
         private const string TWO_EMOJI = "2\ufe0f\u20e3";

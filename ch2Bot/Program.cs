@@ -39,7 +39,7 @@ namespace ch2Bot
 
         private static List<Thread> threads;
 
-        public const string TOKEN = "1444157103:AAFNbMD5prYMZumZt_Vxt_Yv-gXTw_UhVFo";
+        public const string TOKEN = "";//todo
 
         public const string THREAD_EMOJI = "\u270d\ufe0f";
         public const string PHOTO_EMOJI = "\ud83d\udcf7";

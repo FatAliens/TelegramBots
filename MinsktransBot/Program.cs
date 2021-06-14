@@ -13,7 +13,7 @@ namespace MinsktransBot
     class Program
     {
         private static TelegramBotClient client;
-        private const string TOKEN = "1692023716:AAFLvx6ys9nYSxTmbCtnK8OHyswoBpe6A4E";
+        private const string TOKEN = "";//todo
 
         private const string BUSLINK = "https://kogda.by/routes/minsk/autobus";
 

@@ -59,10 +59,10 @@ namespace MinsktransBot
                 Url = url;
             }
 
-            List<string> LoadTime(Station station)
+            public List<string> LoadTime()
             {
                 var web = new HtmlWeb();
-                var stationDocument = web.Load(station.Url);
+                var stationDocument = web.Load(this.Url);
                 var timeNodes = stationDocument.DocumentNode.SelectNodes("//span[@class='future']");
 
                 var timeCollection = new List<string>();
@@ -71,7 +71,7 @@ namespace MinsktransBot
                 {
                     timeCollection.Add(timeNode.InnerText.Trim());
                 }
-
+                
                 return timeCollection;
             }
         }

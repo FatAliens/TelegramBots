@@ -22,11 +22,16 @@ namespace MinsktransBot
         static void LoadData()
         {
             parser = new DataParser(BUSLINK);
-
-            //parser.RefreshData();
-            //parser.SerializeToJson("busCollection.xml");
-
+            
+            //RefreshData();
+            
             parser.DeserializeFromJson("busCollection.xml");
+        }
+
+        static void RefreshData()
+        {
+            parser.RefreshData();
+            parser.SerializeToJson("busCollection.xml");
         }
 
         static void Main(string[] args)
@@ -45,10 +50,13 @@ namespace MinsktransBot
             client.StopReceiving();
         }
 
-        private static InlineKeyboardMarkup GetKeyboardFromCollection<T>(List<T> collection, int pageNumber, Func<T, string> printingMethod, Func<T, string> dataCallbackPrintingMethod, int rows = 8, int columns = 5)
+        private static InlineKeyboardMarkup GetKeyboardFromCollection<T>(List<T> collection, int pageNumber,
+            string prefix,
+            Func<T, string> elementDataGetter,
+            int rows = 8, int columns = 5)
         {
             int elementsPerPage = columns * rows;
-            
+
             int startPosition = pageNumber * elementsPerPage;
 
             var buttons = new List<List<InlineKeyboardButton>>();
@@ -69,8 +77,10 @@ namespace MinsktransBot
                     {
                         break;
                     }
-                    string value = printingMethod.Invoke(collection[i]);
-                    buttons[^1].Add(InlineKeyboardButton.WithCallbackData(value, "BUS_NUMBER|" + value));
+
+                    string text = elementDataGetter.Invoke(collection[i]);
+                    string data = prefix + "|SELECT|" + i;
+                    buttons[^1].Add(InlineKeyboardButton.WithCallbackData(text, data));
                     i++;
                 }
             }
@@ -78,26 +88,35 @@ namespace MinsktransBot
             if (collection.Count > elementsPerPage)
             {
                 buttons.Add(new List<InlineKeyboardButton>());
-                
+
                 if (pageNumber != 0)
                 {
-                    buttons[^1].Add(InlineKeyboardButton.WithCallbackData("Назад", "BUS_PREV|" + pageNumber));
+                    string data = prefix + "|PAGE|" + (pageNumber - 1);
+                    buttons[^1].Add(InlineKeyboardButton.WithCallbackData("Назад", data));
                 }
 
-                if (collection.Count > (pageNumber*elementsPerPage)+elementsPerPage)
+                if (collection.Count > (pageNumber * elementsPerPage) + elementsPerPage)
                 {
-                    buttons[^1].Add(InlineKeyboardButton.WithCallbackData("Далее", "BUS_NEXT|" + pageNumber));
+                    string data = prefix + "|PAGE|" + (pageNumber + 1);
+                    buttons[^1].Add(InlineKeyboardButton.WithCallbackData("Далее", data));
                 }
             }
 
             return new InlineKeyboardMarkup(buttons);
         }
 
+        private static InlineKeyboardMarkup GetBusKeyboard(int pageNumber)
+        {
+            return GetKeyboardFromCollection<DataParser.Bus>(parser.BusCollection, pageNumber,
+                "BUS",
+                bus => bus.Number.ToString());
+        }
+        
         private static async void ClientOnMessage(object sender, MessageEventArgs e)
         {
             Console.WriteLine(e.Message.Text);
 
-            var keyboard = GetKeyboardFromCollection<DataParser.Bus>(parser.BusCollection, 0, bus => bus.Number.ToString());
+            var keyboard = GetBusKeyboard(0);
             await client.SendTextMessageAsync(e.Message.Chat.Id, "Выбирите автобус:", replyMarkup: keyboard);
         }
 
@@ -107,32 +126,76 @@ namespace MinsktransBot
 
             var callbackArgs = e.CallbackQuery.Data.Split('|');
 
-            if (callbackArgs.Length > 1)
+            if (callbackArgs.Length < 3)
             {
                 return;
             }
 
-            if (callbackArgs[0] == "BUS_NUMBER")
+            if (callbackArgs[0] == "BUS")
             {
-                var foundBus = parser.BusCollection.Where(bus => bus.Number == callbackArgs[1]).FirstOrDefault();
-                if (foundBus != null)
+                if (callbackArgs[1] == "SELECT")
                 {
-                    await client.SendTextMessageAsync(e.CallbackQuery.Message.Chat.Id, foundBus.Number);
+                    var foundBus = parser.BusCollection[int.Parse(callbackArgs[2])];
+                    if (foundBus != null)
+                    {
+                        var keyboard = GetKeyboardFromCollection(foundBus.Directions, 0, $"DIRECTION|{parser.BusCollection.IndexOf(foundBus)}",
+                            direction => direction.Title, 20, 1);
+                        await client.EditMessageTextAsync(e.CallbackQuery.Message.Chat.Id, e.CallbackQuery.Message.MessageId, "Выбирите направление:", replyMarkup: keyboard);
+                    }
+                }
+                else if(callbackArgs[1] == "PAGE")
+                {
+                    var keyboard = GetBusKeyboard(int.Parse(callbackArgs[2]));
+                    await client.EditMessageTextAsync(e.CallbackQuery.Message.Chat.Id, e.CallbackQuery.Message.MessageId, "Выбирите автобус:", replyMarkup: keyboard);
                 }
             }
-
-            if (callbackArgs[0] == "BUS_PREV")
+            else if (callbackArgs[0] == "DIRECTION")
             {
-                var keyboard = GetKeyboardFromCollection<DataParser.Bus>(parser.BusCollection, int.Parse(callbackArgs[1]) - 1, bus => bus.Number.ToString());
-                await client.EditMessageTextAsync(e.CallbackQuery.Message.Chat.Id, e.CallbackQuery.Message.MessageId, "Выбирите автобус:", replyMarkup: keyboard);
+                int busNumber = int.Parse(callbackArgs[1]);
+                if (callbackArgs[2] == "SELECT")
+                {
+                    int directionNumber = int.Parse(callbackArgs[3]);
+                    var foundDirection = parser.BusCollection[busNumber].Directions[directionNumber];
+                    Console.WriteLine("Direction: "+foundDirection.Title);
+                    if (foundDirection != null)
+                    {
+                        var keyboard = GetKeyboardFromCollection(foundDirection.Stations, 0, $"STATION|{busNumber}|{directionNumber}",
+                            direction => direction.Title, 8, 1);
+                        await client.EditMessageTextAsync(e.CallbackQuery.Message.Chat.Id, e.CallbackQuery.Message.MessageId, "Выбирите остановку:", replyMarkup: keyboard);
+                    }
+                }
             }
-
-            if (callbackArgs[0] == "BUS_NEXT")
+            else if (callbackArgs[0] == "STATION")
             {
-                var keyboard = GetKeyboardFromCollection<DataParser.Bus>(parser.BusCollection, int.Parse(callbackArgs[1]) + 1, bus => bus.Number.ToString());
-                await client.EditMessageTextAsync(e.CallbackQuery.Message.Chat.Id, e.CallbackQuery.Message.MessageId, "Выбирите автобус:", replyMarkup: keyboard);
-            }
+                int busNumber = int.Parse(callbackArgs[1]);
+                int directionNumber = int.Parse(callbackArgs[2]);
+                if (callbackArgs[3] == "SELECT")
+                {
+                    int stationNumber = int.Parse(callbackArgs[4]);
+                    var times = parser.BusCollection[busNumber].Directions[directionNumber].Stations[stationNumber].LoadTime();
+                    if (times.Count > 0)
+                    {
+                        string text = "";
+                        foreach (var time in times)
+                        {
+                            text += time + "\n";
+                        }
 
+                        await client.SendTextMessageAsync(e.CallbackQuery.Message.Chat.Id, text);
+                    }
+                }
+                else if (callbackArgs[3] == "PAGE")
+                {
+                    var keyboard = GetKeyboardFromCollection(parser.BusCollection[busNumber].Directions[directionNumber].Stations, int.Parse(callbackArgs[4]), $"STATION|{busNumber}|{directionNumber}",
+                        direction => direction.Title, 8, 1);
+                    await client.EditMessageTextAsync(e.CallbackQuery.Message.Chat.Id, e.CallbackQuery.Message.MessageId, "Выбирите остановку:", replyMarkup: keyboard);
+                }
+            }
+            else
+            {
+                await client.AnswerCallbackQueryAsync(e.CallbackQuery.Id, "Error");
+                return;
+            }
             await client.AnswerCallbackQueryAsync(e.CallbackQuery.Id);
         }
     }

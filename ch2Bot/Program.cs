@@ -39,7 +39,7 @@ namespace ch2Bot
 
         private static List<Thread> threads;
 
-        public const string TOKEN = "";//todo
+        public const string TOKEN = ""; //todo
 
         public const string THREAD_EMOJI = "\u270d\ufe0f";
         public const string PHOTO_EMOJI = "\ud83d\udcf7";
@@ -95,7 +95,7 @@ namespace ch2Bot
 
             var comments = new List<Comment>();
 
-            var commentsJson = (JArray)json["threads"][0]["posts"];
+            var commentsJson = (JArray) json["threads"][0]["posts"];
 
             foreach (var node in commentsJson)
             {
@@ -104,7 +104,7 @@ namespace ch2Bot
                     Text = (string) node["comment"]
                 });
             }
-            
+
             return comments;
         }
 
@@ -118,6 +118,7 @@ namespace ch2Bot
             {
                 return output = "String is empthy!";
             }
+
             if (output.Length > 4000)
             {
                 output = output.Substring(0, 4000);
@@ -135,7 +136,7 @@ namespace ch2Bot
             Console.WriteLine($"Num = {threads[0].Number}");
 
             var comments = GetComments(threads[0].Number.ToString());
-            
+
             foreach (var comment in comments)
             {
                 if (!string.IsNullOrWhiteSpace(comment.Text))
@@ -143,9 +144,8 @@ namespace ch2Bot
                     Console.WriteLine(GetClearString(comment.Text));
                 }
             }
-            
-            
-            
+
+
             /*client = new TelegramBotClient(TOKEN);
             client.StartReceiving();
 
@@ -213,6 +213,7 @@ namespace ch2Bot
                     {
                         Console.WriteLine(image);
                     }
+
                     Console.WriteLine("--------------------------------------------");
                 }
                 catch (Exception exception)
@@ -236,7 +237,7 @@ namespace ch2Bot
                 int threadNumber = int.Parse(e.CallbackQuery.Data);
                 //string text = GetThreadString(threads[threadNumber]);todo
                 string text = "";
-                
+
                 await client.EditMessageTextAsync(e.CallbackQuery.Message.Chat.Id, e.CallbackQuery.Message.MessageId,
                     text, disableWebPagePreview: true,
                     parseMode: ParseMode.Default, replyMarkup: GetKeyboard(threadNumber));

@@ -13,7 +13,7 @@ namespace MinsktransBot
     class Program
     {
         private static TelegramBotClient client;
-        private const string TOKEN = "";//todo
+        private const string TOKEN = ""; //todo
 
         private const string BUSLINK = "https://kogda.by/routes/minsk/autobus";
 
@@ -22,9 +22,9 @@ namespace MinsktransBot
         static void LoadData()
         {
             parser = new DataParser(BUSLINK);
-            
+
             //RefreshData();
-            
+
             parser.DeserializeFromJson("busCollection.xml");
         }
 
@@ -111,7 +111,7 @@ namespace MinsktransBot
                 "BUS",
                 bus => bus.Number.ToString());
         }
-        
+
         private static async void ClientOnMessage(object sender, MessageEventArgs e)
         {
             Console.WriteLine(e.Message.Text);
@@ -143,7 +143,7 @@ namespace MinsktransBot
                         await client.EditMessageTextAsync(e.CallbackQuery.Message.Chat.Id, e.CallbackQuery.Message.MessageId, "Выбирите направление:", replyMarkup: keyboard);
                     }
                 }
-                else if(callbackArgs[1] == "PAGE")
+                else if (callbackArgs[1] == "PAGE")
                 {
                     var keyboard = GetBusKeyboard(int.Parse(callbackArgs[2]));
                     await client.EditMessageTextAsync(e.CallbackQuery.Message.Chat.Id, e.CallbackQuery.Message.MessageId, "Выбирите автобус:", replyMarkup: keyboard);
@@ -156,7 +156,7 @@ namespace MinsktransBot
                 {
                     int directionNumber = int.Parse(callbackArgs[3]);
                     var foundDirection = parser.BusCollection[busNumber].Directions[directionNumber];
-                    Console.WriteLine("Direction: "+foundDirection.Title);
+                    Console.WriteLine("Direction: " + foundDirection.Title);
                     if (foundDirection != null)
                     {
                         var keyboard = GetKeyboardFromCollection(foundDirection.Stations, 0, $"STATION|{busNumber}|{directionNumber}",
@@ -196,6 +196,7 @@ namespace MinsktransBot
                 await client.AnswerCallbackQueryAsync(e.CallbackQuery.Id, "Error");
                 return;
             }
+
             await client.AnswerCallbackQueryAsync(e.CallbackQuery.Id);
         }
     }

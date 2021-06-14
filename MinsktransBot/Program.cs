@@ -17,6 +17,9 @@ namespace MinsktransBot
 
         private const string BUSLINK = "https://kogda.by/routes/minsk/autobus";
 
+        private const string PREV_EMOJI = "\u2b05\ufe0f";
+        private const string NEXT_EMOJI = "\u27a1\ufe0f";
+
         private static DataParser parser;
 
         static void LoadData()
@@ -25,13 +28,13 @@ namespace MinsktransBot
 
             //RefreshData();
 
-            parser.DeserializeFromJson("busCollection.xml");
+            parser.DeserializeFromJson("BusCollection.xml");
         }
 
         static void RefreshData()
         {
             parser.RefreshData();
-            parser.SerializeToJson("busCollection.xml");
+            parser.SerializeToJson("BusCollection.xml");
         }
 
         static void Main(string[] args)
@@ -50,8 +53,7 @@ namespace MinsktransBot
             client.StopReceiving();
         }
 
-        private static InlineKeyboardMarkup GetKeyboardFromCollection<T>(List<T> collection, int pageNumber,
-            string prefix,
+        private static InlineKeyboardMarkup GetKeyboardFromCollection<T>(List<T> collection, int pageNumber, string prefix,
             Func<T, string> elementDataGetter,
             int rows = 8, int columns = 5)
         {
@@ -92,13 +94,13 @@ namespace MinsktransBot
                 if (pageNumber != 0)
                 {
                     string data = prefix + "|PAGE|" + (pageNumber - 1);
-                    buttons[^1].Add(InlineKeyboardButton.WithCallbackData("Назад", data));
+                    buttons[^1].Add(InlineKeyboardButton.WithCallbackData(PREV_EMOJI, data));
                 }
 
                 if (collection.Count > (pageNumber * elementsPerPage) + elementsPerPage)
                 {
                     string data = prefix + "|PAGE|" + (pageNumber + 1);
-                    buttons[^1].Add(InlineKeyboardButton.WithCallbackData("Далее", data));
+                    buttons[^1].Add(InlineKeyboardButton.WithCallbackData(NEXT_EMOJI, data));
                 }
             }
 
@@ -156,7 +158,6 @@ namespace MinsktransBot
                 {
                     int directionNumber = int.Parse(callbackArgs[3]);
                     var foundDirection = parser.BusCollection[busNumber].Directions[directionNumber];
-                    Console.WriteLine("Direction: " + foundDirection.Title);
                     if (foundDirection != null)
                     {
                         var keyboard = GetKeyboardFromCollection(foundDirection.Stations, 0, $"STATION|{busNumber}|{directionNumber}",

@@ -19,6 +19,7 @@ namespace MinsktransBot
 
         private const string PREV_EMOJI = "\u2b05\ufe0f";
         private const string NEXT_EMOJI = "\u27a1\ufe0f";
+        private const string TOP_EMOJI = "\u2b06\ufe0f";
 
         private static DataParser parser;
 
@@ -55,7 +56,7 @@ namespace MinsktransBot
 
         private static InlineKeyboardMarkup GetKeyboardFromCollection<T>(List<T> collection, int pageNumber, string prefix,
             Func<T, string> elementDataGetter,
-            int rows = 8, int columns = 5)
+            int rows = 8, int columns = 5, string backButton = "")
         {
             int elementsPerPage = columns * rows;
 
@@ -87,7 +88,7 @@ namespace MinsktransBot
                 }
             }
 
-            if (collection.Count > elementsPerPage)
+            if ((collection.Count > elementsPerPage)||backButton!="")
             {
                 buttons.Add(new List<InlineKeyboardButton>());
 
@@ -101,6 +102,11 @@ namespace MinsktransBot
                 {
                     string data = prefix + "|PAGE|" + (pageNumber + 1);
                     buttons[^1].Add(InlineKeyboardButton.WithCallbackData(NEXT_EMOJI, data));
+                }
+
+                if (backButton!="")
+                {
+                    buttons[^1].Add(InlineKeyboardButton.WithCallbackData(TOP_EMOJI, backButton));
                 }
             }
 
@@ -128,7 +134,7 @@ namespace MinsktransBot
 
             var callbackArgs = e.CallbackQuery.Data.Split('|');
 
-            if (callbackArgs.Length < 3)
+            if (callbackArgs.Length < 2)
             {
                 return;
             }
@@ -141,7 +147,7 @@ namespace MinsktransBot
                     if (foundBus != null)
                     {
                         var keyboard = GetKeyboardFromCollection(foundBus.Directions, 0, $"DIRECTION|{parser.BusCollection.IndexOf(foundBus)}",
-                            direction => direction.Title, 20, 1);
+                            direction => direction.Title, 20, 1, backButton: $"BUS|PAGE|0");
                         await client.EditMessageTextAsync(e.CallbackQuery.Message.Chat.Id, e.CallbackQuery.Message.MessageId, "Выбирите направление:", replyMarkup: keyboard);
                     }
                 }
@@ -161,7 +167,7 @@ namespace MinsktransBot
                     if (foundDirection != null)
                     {
                         var keyboard = GetKeyboardFromCollection(foundDirection.Stations, 0, $"STATION|{busNumber}|{directionNumber}",
-                            direction => direction.Title, 8, 1);
+                            direction => direction.Title, 8, 1, backButton: $"BUS|SELECT|{callbackArgs[1]}");
                         await client.EditMessageTextAsync(e.CallbackQuery.Message.Chat.Id, e.CallbackQuery.Message.MessageId, "Выбирите остановку:", replyMarkup: keyboard);
                     }
                 }
@@ -173,7 +179,7 @@ namespace MinsktransBot
                 if (callbackArgs[3] == "SELECT")
                 {
                     int stationNumber = int.Parse(callbackArgs[4]);
-                    var times = parser.BusCollection[busNumber].Directions[directionNumber].Stations[stationNumber].LoadTime();
+                    var times = parser.BusCollection[busNumber].Directions[directionNumber].Stations[stationNumber].Times;
                     if (times.Count > 0)
                     {
                         string text = "";
@@ -182,7 +188,7 @@ namespace MinsktransBot
                             text += time + "\n";
                         }
 
-                        await client.SendTextMessageAsync(e.CallbackQuery.Message.Chat.Id, text);
+                        await client.EditMessageTextAsync(e.CallbackQuery.Message.Chat.Id, e.CallbackQuery.Message.MessageId, text, replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithCallbackData(TOP_EMOJI, $"DIRECTION|{busNumber}|SELECT|{directionNumber}")));
                     }
                 }
                 else if (callbackArgs[3] == "PAGE")

@@ -49,30 +49,17 @@ namespace MinsktransBot
             public string Title { get; set; }
             public string Url { get; set; }
 
+            public List<string> Times { get; set; }
+
             public Station()
             {
             }
 
-            public Station(string title, string url)
+            public Station(string title, string url, List<string> times)
             {
                 Title = title;
                 Url = url;
-            }
-
-            public List<string> LoadTime()
-            {
-                var web = new HtmlWeb();
-                var stationDocument = web.Load(this.Url);
-                var timeNodes = stationDocument.DocumentNode.SelectNodes("//span[@class='future']");
-
-                var timeCollection = new List<string>();
-
-                foreach (var timeNode in timeNodes)
-                {
-                    timeCollection.Add(timeNode.InnerText.Trim());
-                }
-                
-                return timeCollection;
+                Times = times;
             }
         }
 
@@ -83,19 +70,26 @@ namespace MinsktransBot
         public DataParser(string busLink)
         {
             BusLink = busLink;
+            BusCollection = new List<Bus>();
         }
 
         public void RefreshData()
         {
             BusCollection = GetBusCollection();
             var timer = new Stopwatch();
-            
+
+            int maxBusLoad = 3;
             foreach (var bus in BusCollection)
             {
+                if (maxBusLoad == 0)
+                {
+                    return;
+                }
                 timer.Restart();
                 bus.Directions = GetStationPages(bus.Url);
                 timer.Stop();
                 Console.WriteLine($"[{timer.ElapsedMilliseconds} ms] {bus.Number} [{bus.Directions[0].Stations.Count} stops] [{bus.Directions.Count} directions]");
+                maxBusLoad--;
             }
         }
 
@@ -148,10 +142,13 @@ namespace MinsktransBot
 
                 foreach (var stationDocument in stationDocuments)
                 {
+                    var times = new List<string>();
+                    string url = stationDocument.Attributes["href"].Value + "/detailed";
                     stations.Add(new Station()
                     {
                         Title = stationDocument.InnerText.Trim(),
-                        Url = stationDocument.Attributes["href"].Value
+                        Url = url,
+                        Times = LoadTime(url)
                     });
                 }
 
@@ -159,6 +156,22 @@ namespace MinsktransBot
             }
 
             return directions;
+        }
+        
+        public List<string> LoadTime(string url)
+        {
+            var web = new HtmlWeb();
+            var stationDocument = web.Load(url);
+            var timeNodes = stationDocument.DocumentNode.SelectNodes("//span[@class='time']");
+
+            var timeCollection = new List<string>();
+
+            foreach (var timeNode in timeNodes)
+            {
+                timeCollection.Add(timeNode.InnerText.Trim());
+            }
+
+            return timeCollection;
         }
 
         public void SerializeToJson(string filePath)
@@ -168,11 +181,13 @@ namespace MinsktransBot
             serializer.Serialize(writer, BusCollection);
             writer.Close();
         }
+
         public void DeserializeFromJson(string filePath)
         {
+            BusCollection.Clear();
             var reader = new StreamReader(filePath);
             var serializer = new XmlSerializer(typeof(List<DataParser.Bus>));
-            BusCollection = (List<DataParser.Bus>)serializer.Deserialize(reader);
+            BusCollection = (List<DataParser.Bus>) serializer.Deserialize(reader);
             reader.Close();
         }
     }

@@ -25,7 +25,7 @@ namespace MinsktransBot
         {
             parser = new DataParser();
 
-            RefreshData();
+            //RefreshData();
 
             parser.DeserializeFromJson("BusCollection.xml");
         }
@@ -41,7 +41,7 @@ namespace MinsktransBot
             LoadData();
             Console.WriteLine($"First {parser.BusCollection[0].Number} : Last {parser.BusCollection[^1].Number} : Count {parser.BusCollection.Count}");
 
-            /*
+            
             client = new TelegramBotClient(TOKEN);
             client.StartReceiving();
 
@@ -51,7 +51,7 @@ namespace MinsktransBot
             Console.WriteLine("Press any key to stop!");
             Console.ReadKey();
             client.StopReceiving();
-            */
+            
         }
 
         private static InlineKeyboardMarkup GetKeyboardFromCollection<T>(List<T> collection, int pageNumber, string prefix,
@@ -178,18 +178,22 @@ namespace MinsktransBot
                 int directionNumber = int.Parse(callbackArgs[2]);
                 if (callbackArgs[3] == "SELECT")
                 {
-                    /*int stationNumber = int.Parse(callbackArgs[4]);
-                    var times = parser.BusCollection[busNumber].Directions[directionNumber].Stations[stationNumber].Times;
-                    if (times.Count > 0)
+                    int stationNumber = int.Parse(callbackArgs[4]);
+                    var days = parser.BusCollection[busNumber].Directions[directionNumber].Stations[stationNumber].Days;
+                    if (days.Count > 0)
                     {
                         string text = "";
-                        foreach (var time in times)
+                        foreach (var day in days)
                         {
-                            text += time + "\n";
+                            foreach (var time in day.Time)
+                            {
+                                text += time + " ";
+                            }
+                            text += "\n";
                         }
 
                         await client.EditMessageTextAsync(e.CallbackQuery.Message.Chat.Id, e.CallbackQuery.Message.MessageId, text, replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithCallbackData(TOP_EMOJI, $"DIRECTION|{busNumber}|SELECT|{directionNumber}")));
-                    }*/
+                    }
                 }
                 else if (callbackArgs[3] == "PAGE")
                 {

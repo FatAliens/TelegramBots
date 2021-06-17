@@ -54,7 +54,7 @@ namespace MinsktransBot
             int counter = 0;
             foreach (var bus in BusCollection)
             {
-                if (counter >= 1)
+                if (counter >= 200)
                 {
                     return;
                 }

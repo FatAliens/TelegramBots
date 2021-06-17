@@ -14,9 +14,7 @@ namespace MinsktransBot
     {
         private static TelegramBotClient client;
         private const string TOKEN = ""; //todo
-
-        private const string BUSLINK = "https://kogda.by/routes/minsk/autobus";
-
+        
         private const string PREV_EMOJI = "\u2b05\ufe0f";
         private const string NEXT_EMOJI = "\u27a1\ufe0f";
         private const string TOP_EMOJI = "\u2b06\ufe0f";
@@ -25,9 +23,9 @@ namespace MinsktransBot
 
         static void LoadData()
         {
-            parser = new DataParser(BUSLINK);
+            parser = new DataParser();
 
-            //RefreshData();
+            RefreshData();
 
             parser.DeserializeFromJson("BusCollection.xml");
         }
@@ -43,6 +41,7 @@ namespace MinsktransBot
             LoadData();
             Console.WriteLine($"First {parser.BusCollection[0].Number} : Last {parser.BusCollection[^1].Number} : Count {parser.BusCollection.Count}");
 
+            /*
             client = new TelegramBotClient(TOKEN);
             client.StartReceiving();
 
@@ -52,6 +51,7 @@ namespace MinsktransBot
             Console.WriteLine("Press any key to stop!");
             Console.ReadKey();
             client.StopReceiving();
+            */
         }
 
         private static InlineKeyboardMarkup GetKeyboardFromCollection<T>(List<T> collection, int pageNumber, string prefix,
@@ -178,7 +178,7 @@ namespace MinsktransBot
                 int directionNumber = int.Parse(callbackArgs[2]);
                 if (callbackArgs[3] == "SELECT")
                 {
-                    int stationNumber = int.Parse(callbackArgs[4]);
+                    /*int stationNumber = int.Parse(callbackArgs[4]);
                     var times = parser.BusCollection[busNumber].Directions[directionNumber].Stations[stationNumber].Times;
                     if (times.Count > 0)
                     {
@@ -189,7 +189,7 @@ namespace MinsktransBot
                         }
 
                         await client.EditMessageTextAsync(e.CallbackQuery.Message.Chat.Id, e.CallbackQuery.Message.MessageId, text, replyMarkup: new InlineKeyboardMarkup(InlineKeyboardButton.WithCallbackData(TOP_EMOJI, $"DIRECTION|{busNumber}|SELECT|{directionNumber}")));
-                    }
+                    }*/
                 }
                 else if (callbackArgs[3] == "PAGE")
                 {

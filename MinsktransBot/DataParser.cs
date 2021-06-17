@@ -15,163 +15,171 @@ namespace MinsktransBot
             public List<Direction> Directions { get; set; }
             public string Number { get; set; }
             public string Url { get; set; }
-
-            public Bus()
-            {
-            }
-
-            public Bus(List<Direction> directions, string number, string url)
-            {
-                Directions = directions;
-                Number = number;
-                Url = url;
-            }
         }
 
         public class Direction
         {
             public string Title { get; set; }
             public List<Station> Stations { get; set; }
-
-            public Direction()
-            {
-            }
-
-            public Direction(string title, List<Station> stations)
-            {
-                Title = title;
-                Stations = stations;
-            }
         }
 
         public class Station
         {
             public string Title { get; set; }
             public string Url { get; set; }
-
-            public List<string> Times { get; set; }
-
-            public Station()
-            {
-            }
-
-            public Station(string title, string url, List<string> times)
-            {
-                Title = title;
-                Url = url;
-                Times = times;
-            }
+            public List<Day> Days { get; set; }
         }
 
-        public string BusLink { get; private set; }
+        public class Day
+        {
+            public string Title { get; set; }
+            public List<TimeSpan> Time { get; set; }
+        }
+
+        public const string BusLink = "https://minsk.btrans.by/avtobus";
 
         public List<Bus> BusCollection { get; private set; }
 
-        public DataParser(string busLink)
+        public DataParser()
         {
-            BusLink = busLink;
             BusCollection = new List<Bus>();
         }
 
         public void RefreshData()
         {
             BusCollection = GetBusCollection();
+
             var timer = new Stopwatch();
 
-            int maxBusLoad = 3;
+            int counter = 0;
             foreach (var bus in BusCollection)
             {
-                if (maxBusLoad == 0)
+                if (counter >= 1)
                 {
                     return;
                 }
+
                 timer.Restart();
-                bus.Directions = GetStationPages(bus.Url);
+                bus.Directions = GetDirections(bus.Url);
                 timer.Stop();
                 Console.WriteLine($"[{timer.ElapsedMilliseconds} ms] {bus.Number} [{bus.Directions[0].Stations.Count} stops] [{bus.Directions.Count} directions]");
-                maxBusLoad--;
+                counter++;
             }
+        }
+
+        private HtmlDocument LoadHtmlDocument(string url)
+        {
+            var web = new HtmlWeb();
+            web.PreRequest += request =>
+            {
+                request.CookieContainer = new System.Net.CookieContainer();
+                return true;
+            };
+            return web.Load(url);
         }
 
         List<Bus> GetBusCollection()
         {
-            var web = new HtmlWeb();
-            var document = web.Load(BusLink);
+            var document = LoadHtmlDocument(BusLink);
 
             var busNodes =
-                document.DocumentNode.SelectNodes(@"//a[@href]");
-            foreach (var busNode in busNodes.ToList())
-            {
-                if (!busNode.Attributes["href"].Value.Contains("https://kogda.by/routes/minsk/autobus/"))
-                {
-                    busNodes.Remove(busNode);
-                }
-            }
+                document.DocumentNode.SelectNodes(@"//a[@class='hexagon-link-content']");
 
             var busCollection = new List<Bus>();
 
             foreach (var busNode in busNodes)
             {
-                busCollection.Add(new Bus()
+                if (int.TryParse(busNode.InnerText, out int n))
                 {
-                    Number = busNode.InnerText.Trim(),
-                    Url = busNode.Attributes["href"].Value.Trim()
-                });
+                    busCollection.Add(new Bus()
+                    {
+                        Number = busNode.InnerText.Trim(),
+                        Url = "https://minsk.btrans.by" + busNode.Attributes["href"].Value.Trim()
+                    });
+                }
             }
 
             return busCollection;
         }
 
-        List<Direction> GetStationPages(string busLink)
+        List<Direction> GetDirections(string busLink)
         {
-            var web = new HtmlWeb();
-            var stationCollection = new List<Station>();
-            var htmlDocument = web.Load(busLink);
+            var htmlDocument = LoadHtmlDocument(busLink);
 
-            var stationPagesDocuments = htmlDocument.DocumentNode.SelectNodes(@"//div[@class='panel panel-default']");
+            var directionDocuments = htmlDocument.DocumentNode.SelectNodes(@"//div[@class='direction']");
 
             var directions = new List<Direction>();
 
-            foreach (var page in stationPagesDocuments)
+            foreach (var directionDocument in directionDocuments)
             {
-                string title = page.SelectSingleNode(@".//h4/a").InnerText.Trim();
+                string title = directionDocument.SelectSingleNode(@".//h2").InnerText.Trim();
 
-                var stationDocuments = page.SelectSingleNode(".//ul").SelectNodes(".//a");
+                var stationDocuments = directionDocument.SelectSingleNode(".//ul").SelectNodes(".//a");
 
                 var stations = new List<Station>();
 
                 foreach (var stationDocument in stationDocuments)
                 {
-                    var times = new List<string>();
-                    string url = stationDocument.Attributes["href"].Value + "/detailed";
+                    string stationUrl = "https://minsk.btrans.by" + stationDocument.Attributes["href"].Value + "/detailed";
+                    string stationTitle = stationDocument.InnerText.Trim();
                     stations.Add(new Station()
                     {
-                        Title = stationDocument.InnerText.Trim(),
-                        Url = url,
-                        Times = LoadTime(url)
+                        Title = stationTitle,
+                        Url = stationUrl,
+                        Days = LoadDays(stationUrl)
                     });
                 }
 
-                directions.Add(new Direction(title, stations));
+                directions.Add(new Direction() {Title = title, Stations = stations});
             }
 
             return directions;
         }
-        
-        public List<string> LoadTime(string url)
+
+        public List<Day> LoadDays(string url)
         {
-            var web = new HtmlWeb();
-            var stationDocument = web.Load(url);
-            var timeNodes = stationDocument.DocumentNode.SelectNodes("//span[@class='time']");
+            var stationDocument = LoadHtmlDocument(url);
+            var timeCellNodes = stationDocument.DocumentNode.SelectNodes("//div[@class='timetable-ceil']");
 
-            var timeCollection = new List<string>();
+            var dayCollection = new List<Day>();
 
-            foreach (var timeNode in timeNodes)
+            var headerNodes = stationDocument.DocumentNode
+                .SelectSingleNode("//div[@class='timetable-ceil timetable-ceil__additional']/div[@class='timetable-ceil-day-item']")
+                .ChildNodes.Where(div => div.Attributes["class"].Value.Contains("timetable-ceil-day-minutes"));
+            foreach (var header in headerNodes)
             {
-                timeCollection.Add(timeNode.InnerText.Trim());
+                dayCollection.Add(new Day() {Title = header.InnerText.Trim(), Time = new List<TimeSpan>()});
             }
 
-            return timeCollection;
+            foreach (var timeCell in timeCellNodes)
+            {
+                int hour = int.Parse(timeCell.SelectSingleNode("./div[@class='timetable-ceil-hour']").InnerText);
+
+                var divNodes = timeCell.SelectSingleNode(".//div[@class='timetable-ceil-day-item']").ChildNodes;
+                string header = null;
+                foreach (var div in divNodes)
+                {
+                    if (div.Attributes["class"].Value.Contains("timetable-ceil-day-header"))
+                    {
+                        header = div.InnerText.Trim();
+                    }
+                    else if (div.Attributes["class"].Value.Contains("timetable-ceil-day-minutes"))
+                    {
+                        string classAttribute = div.Attributes["class"].Value;
+                        string[] minutes = div.InnerText.Trim().Split(' ');
+                        if (minutes[0] != "")
+                        {
+                            foreach (string minute in minutes)
+                            {
+                                var currentDay = dayCollection.Where(day => day?.Title == header).FirstOrDefault();
+                                currentDay.Time.Add(new TimeSpan(hour, int.Parse(minute), 0));
+                            }
+                        }
+                    }
+                }
+            }
+
+            return dayCollection;
         }
 
         public void SerializeToJson(string filePath)

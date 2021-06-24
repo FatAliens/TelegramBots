@@ -136,7 +136,7 @@ namespace MinsktransBot
             return directions;
         }
 
-        public List<Day> LoadDays(string url)
+        private List<Day> LoadDays(string url)
         {
             var stationDocument = LoadHtmlDocument(url);
             var timeCellNodes = stationDocument.DocumentNode.SelectNodes("//div[@class='timetable-ceil']");

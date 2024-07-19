@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
 using System.Xml.Serialization;
 using HtmlAgilityPack;
 
@@ -12,9 +14,9 @@ namespace MinsktransBot
     {
         public class Bus
         {
-            public List<Direction> Directions { get; set; }
             public string Number { get; set; }
             public string Url { get; set; }
+            public List<Direction> Directions { get; set; }
         }
 
         public class Direction
@@ -36,7 +38,7 @@ namespace MinsktransBot
             public List<TimeSpan> Time { get; set; }
         }
 
-        public const string BusLink = "https://minsk.btrans.by/avtobus";
+        public const string BusLink = "https://kogda.by/routes/minsk/autobus";
 
         public List<Bus> BusCollection { get; private set; }
 
@@ -45,45 +47,32 @@ namespace MinsktransBot
             BusCollection = new List<Bus>();
         }
 
-        public void RefreshData()
+        public async Task RefreshData()
         {
-            BusCollection = GetBusCollection();
+            BusCollection = await GetBusCollection();
 
             var timer = new Stopwatch();
 
-            int counter = 0;
             foreach (var bus in BusCollection)
             {
-                if (counter >= 200)
-                {
-                    return;
-                }
-
-                timer.Restart();
-                bus.Directions = GetDirections(bus.Url);
-                timer.Stop();
+                bus.Directions = await GetDirections(bus.Url);
                 Console.WriteLine($"[{timer.ElapsedMilliseconds} ms] {bus.Number} [{bus.Directions[0].Stations.Count} stops] [{bus.Directions.Count} directions]");
-                counter++;
             }
         }
 
-        private HtmlDocument LoadHtmlDocument(string url)
+        async Task<HtmlDocument> LoadHtmlDocument(string url)
         {
             var web = new HtmlWeb();
-            web.PreRequest += request =>
-            {
-                request.CookieContainer = new System.Net.CookieContainer();
-                return true;
-            };
-            return web.Load(url);
+            web.AutoDetectEncoding = true;
+            return await web.LoadFromWebAsync(url);
         }
 
-        List<Bus> GetBusCollection()
+        async Task<List<Bus>> GetBusCollection()
         {
-            var document = LoadHtmlDocument(BusLink);
-
+            var document = await LoadHtmlDocument(BusLink);
+            Console.WriteLine(document.ParsedText);
             var busNodes =
-                document.DocumentNode.SelectNodes(@"//a[@class='hexagon-link-content']");
+                document.DocumentNode.SelectNodes(@"//div[@id='routes-block-0']");
 
             var busCollection = new List<Bus>();
 
@@ -102,9 +91,9 @@ namespace MinsktransBot
             return busCollection;
         }
 
-        List<Direction> GetDirections(string busLink)
+        async Task<List<Direction>> GetDirections(string busLink)
         {
-            var htmlDocument = LoadHtmlDocument(busLink);
+            var htmlDocument = await LoadHtmlDocument(busLink);
 
             var directionDocuments = htmlDocument.DocumentNode.SelectNodes(@"//div[@class='direction']");
 
@@ -126,7 +115,7 @@ namespace MinsktransBot
                     {
                         Title = stationTitle,
                         Url = stationUrl,
-                        Days = LoadDays(stationUrl)
+                        Days = await LoadDays(stationUrl)
                     });
                 }
 
@@ -136,9 +125,9 @@ namespace MinsktransBot
             return directions;
         }
 
-        private List<Day> LoadDays(string url)
+        async  Task<List<Day>> LoadDays(string url)
         {
-            var stationDocument = LoadHtmlDocument(url);
+            var stationDocument = await LoadHtmlDocument(url);
             var timeCellNodes = stationDocument.DocumentNode.SelectNodes("//div[@class='timetable-ceil']");
 
             var dayCollection = new List<Day>();
